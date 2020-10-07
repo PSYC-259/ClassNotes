@@ -1,0 +1,122 @@
+---
+title: "PSYC259- Getting Started"
+author: "Amanda Mae Woodward"
+date: "10/6/2020"
+output: html_document
+---
+# Day 1: R & RStudio 
+
+## Goals for Today:
+- Explain what R Studio and R are and why they are beneficial to use 
+- Course Expectations
+- Identify the Four Windows present in R Studio
+- Describe how to use an R Mark Down File 
+
+## Goal #1 Explain what R Studio and R are and why they are beneficial to use 
+
+### Why R? 
+- Free!
+- Lots of Packages that make analyses easier 
+- No point and Click 
+- **Really** Good Graphics
+- Easy to reuse code and also share
+
+### Why RStudio? (opinions) 
+- Easy to see code, outputs, and data visualizations
+- More Intuitive
+- Help files present and see how data are imported
+
+## Goal #2: Course Expectations
+
+### Ask Questions
+- Coding *is* hard.
+- A little bit of struggling is okay, but this course should not lead to feelings of existential dread.
+- Ask your peers, ask your TA, ask me
+- Stack Overflow, R Cookbook
+- Remember, coding is cumulative, so it's best to address questions quickly
+
+### Try, Try, Try
+- The only way to get better at coding is to practice. 
+- You'll get practice in many ways: class examples, assignments, and the final project
+
+### Learning Environment
+- We're all here to learn, and we're at different levels
+- It's okay to make mistakes
+- I don't expect anyone to know everything about R (it's okay if you know only a little)
+
+### There is no one way to code!
+
+## Goal 3: Identify the Four Windows present in R Studio
+
+###Getting to know the space
+You may notice that we’re using something called R Studio. I like it more than just using the R shell. It highlights the code so code blocks, text, and functions are all different colors. (more intuitive to me)
+
+###R Mark Down (.Rmd File)
+- stored file
+- saves variables
+- for class, make sure everything you want to submit is in the .Rmd.
+
+###Console:
+- can use for quick math
+- if you want to view data, type it here
+- installing packages
+- accessing help files
+
+###Environment:
+- list of stored information in your R Studio space
+- can call these items by typing the name in the .Rmd file and pressing run or by typing in console and hitting enter
+- “Import Data set” - allows you to manually import your datasets (can do this with code too, but sometimes easier)
+- Environment too crowded? - use the clear button to empty it (will need to re run code to get items back)
+
+###Files/Plots/Packages/Help/Viewer
+- gives everything else
+- Files: allows you to search for a file in your directory
+- Plots: will show the plots as we make them
+- Packages: In addition to commands built into R, packages contain additional functions contributed by other programmers (you can do this to!). This section tells you what packages you have access to
+- Help file: typing ? in front of a function in the Console will open a Help file in this window
+- Viewer: allows you to see HTML files 
+
+
+## Goal #4 Describe how to use an R Mark Down File 
+- .Rmd files let you use text and code simultaneously 
+- R will treat anything you write in this file as text
+- If you want it to read code, you need to place it in a code chunk (version dependent)
+- To make a code chunk write 3 accents (`) (on a QWERTY key board, it is the button above the left tab)
+- Then write {r} 
+
+```{r}
+
+```
+- This highlighted area is called a "code chunk." You need to close the chunk as I did above
+- You can name your code chunk by writing it's name with no spaces after the r
+```{r firstChunk}
+
+```
+- Names can help you search for code chunks in longer files
+
+You can also write code in a code chunk, but need to use quotes or #
+```{r writingText}
+"you can write anything you'd like in quotes"
+
+# hashtags/pound signs will let you turn a whole line into text.
+```
+
+###Other uses
+- you can include other components to emphasize points in your .Rmd file
+- some changes won't be seen until you knit the file 
+
+###Knitting the file
+You can choose to knit your file into another format to share your work. 
+
+
+
+
+
+
+
+
+
+
+
+
+
