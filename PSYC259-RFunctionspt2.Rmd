@@ -23,19 +23,15 @@ You could print the dataframe repeatedly, but it's tedious. Here are some functi
 
 colnames
 ```{r}
-data(mtcars)
-colnames(mtcars)
 ```
 
 **editing column names**
 colnames returns all of the column names in a vector. So we can get column names using indexing as well. 
 ```{r}
-colnames(mtcars)[1]
 ```
 
 It **also** means that you can change names if necessary (when we talk about dataframe manipulation next week, this can become important.)
 ```{r}
-colnames(mtcars)[1]<-"milesPerGallon"
 ```
 
 More often than not, we're using datasets that we either created or received from collaborators. That means that you may be dealing with problems **past you** graciously left you, different naming conventions, or even needing to manipulate variables that combine information. We'll talk about how to fix some of the more involved ones next week. For now, ones that may be helpful are making sure your column names are all lower case or all upper case. You can do this with the toupper and tolower functions:
@@ -128,10 +124,6 @@ One thing to note- anything you make in a function **stays in the function.** If
 **Multiple argument functions**
 We can make functions with more than one argument. For instance we could multiply all of the numbers in our original vector by a second vector 10-1
 ```{r}
-mult<- function(col1, col2){
-  col1*col2
-}
-mult(1:10, 10:1)
 ```
 
 ####Learning Outcome 3 Practice
@@ -172,11 +164,6 @@ think we want to do
 
 Here, I'm going to fill in the other parts as code: 
 ```{r}
-ChickWeight$progression<- NA
-for (i in 1:length(ChickWeight)){
-  ChickWeight$progression[ChickWeight$Time>=10]<-"end"
-  ChickWeight$progression[ChickWeight$Time<10]<-"beginning"
-}
 ```
 
 #### Practice for Learning Outcome 4: 
@@ -195,17 +182,9 @@ what you want to happen
 
 Let's try one: in this case, we'll make an if statement to 
 ```{r}
-if(mean(mtcars$mpg) >20){
-  print("good")
-}
 ```
 You can add an "else" statement to tell R what to do if the given condition is false: 
 ```{r}
-if(mean(mtcars$mpg)< 20){
-  print("good")
-} else {
-  print("bad")
-}
 ```
 
 **ifelse statements**
@@ -215,7 +194,6 @@ ifelse(condition, if TRUE, if FALSE)
 
 We can use this to accomplish the same thing we did above:
 ```{r}
-ifelse(mean(mtcars$mpg>20), "good", "bad")
 ```
 
 ####Learning Outcome 5 Practice: 
