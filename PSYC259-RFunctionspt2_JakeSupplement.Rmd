@@ -1,0 +1,109 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+You can index column in a dataframe from their number...
+
+```{r}
+mtcars
+
+mtcars[2]
+```
+
+But you can also do this by their column names if you'd like
+
+```{r}
+mtcars["cyl"]
+```
+
+You can also do this for more than one column name at a time
+
+```{r}
+mtcars[c("mpg","cyl")]
+```
+
+You can use for loops over a sequence of numbers, such as 1:nrow(datafrmae)
+
+```{r}
+for(i in 1:nrow(mtcars)){
+  print("I am row")
+  print(i)
+}
+```
+
+But you can also iterate over any vector with numbers in it. It does not have to be 1:length... It can also be an array of subject IDs for example.
+
+```{r}
+subjects <- sort(sample(1:100, 30, replace = FALSE), decreasing = FALSE) # generate random numbers from 1 to 100 and sort in order
+
+for(i in subjects){
+  print("I am subject")
+  print(i)
+}
+```
+
+You can do ifelse() statements as one line code as Amanda described but you can also do if, else if, and else statements all with multiple contingencies in one statement
+
+```{r}
+age<-sample(1:100, 30, replace = FALSE) # 30 random subjects ids
+gender<-ifelse(runif(30)>.5,"male","female") # generating 30 random strings of male or female
+df <- data.frame(age, gender) # put a dataframe together of those things
+df$category <- NA # create empty column
+
+# throughout this, it will be assigning a value to each row of the category column depending on the age and gender of the row
+for(i in 1:nrow(df)){ # for each row in this dataframe
+  if(df$age[i] < 30){ # if age is less than 30
+    if(df$gender[i] == "male"){ # and gender is male
+      df$category[i] <- "lowMale" # assign category of low age male
+    }else{
+      df$category[i] <- "lowFemale" # else assign category low age female
+    }
+  }else if(df$age[i] >= 30 & df$age[i] < 60){ # if age is above age 30 AND below age 60 (i.e. between ages 30 and 60)
+    if(df$gender[i] == "male"){ # and gender is male
+      df$category[i] <- "midMale" # assign category of mid age male
+    }else{
+      df$category[i] <- "midFemale" # else assign category of mid age female
+    }
+  }else{ # else if not low or mid age
+    if(df$gender[i] == "male"){ # and if male
+      df$category[i] <- "highMale" # then high age male
+    }else{
+      df$category[i] <- "highFemale" # else high age female
+    }
+  }
+}
+```
+
+Amanda described creating functions with required parameters/arguments...
+
+```{r}
+mult<- function(col1, col2){
+  col1*col2
+}
+mult(1:10, 10:1)
+```
+
+This is optional, but you can explicitly state what output you would like R to rturn from the function. Unlike custom functions in other languages, R will automatically return what is produced on the last line. However, it can sometimes be useful for readability and comprehension to explicitly state what you are returning.
+
+```{r}
+mult<- function(col1, col2){
+  return(col1*col2)
+}
+mult(1:10, 10:1)
+```
+
+In your custom function, you can include default parameters. Specifically, the output will be CONDITIONAL on whether you change the parameter from its default. For example, in the below function, we can default to multiplying the two columns together, but if "single = TRUE" is set, then only column 1 will be returned.
+
+```{r}
+mult<- function(col1, col2, single = FALSE){
+  if(single == FALSE){
+    output <- col1*col2
+  } else if(single == TRUE){
+    output <- col1
+  }
+  return(output)
+}
+mult(1:10, 10:1)
+mult(1:10, 10:1, single = TRUE)
+```
