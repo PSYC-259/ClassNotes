@@ -22,7 +22,7 @@ You'll want to press the "import dataset" button above your global environment. 
 Once you hit okay, you'll see your dataset pop up in the console below. You should move it to your .Rmd file and name it however you'd like. I have a tendency to use "dat", though it's not the most informative. Feel free to use your own name, but remember that whatever you call it here is how you'll refer to it for the rest of the lesson. 
 
 ```{r}
-
+dat<- read.csv("~/Desktop/PSYC259-AggressionSampleData.csv")
 ```
 
 ###Learning Outcome #1: Transform wide data to long
@@ -41,15 +41,28 @@ As mentioned above, the current data are in wide format. We can change this to l
 I think this is the easiest version to use. We'll need to use the "tidyr" dataset. 
 ```{r}
 
+library(tidyr)
 ```
 pivot_longer() uses the following structure: 
 pivot_longer(dataframe, columns containing wide data, names_to, values_to)
 names_to: specifies what you'd like to call the column that contains the previous column names
 values_to: specifies the name of the column where the scores go
 ```{r}
-
+datLong<- pivot_longer(dat, cols=c("baselineAggression", "postAggression"), names_to= "timePoint", values_to= "aggressionScores")
 ```
 **Note:** remember to save the data to your environment. 
+
+####Learning Outcome 1 Practice
+1. Open the relig_income dataset.
+```{r}
+data(relig_income)
+```
+
+2. Restructure the dataset so that it is in long format. 
+```{r}
+religionDatLong<-pivot_longer(relig_income, cols= 2:11, names_to="Income", values_to="frequency")
+religionDatLong
+```
 
 **gather** 
 gather() is another function in tidyr that can be used to.
@@ -57,23 +70,22 @@ gather has the following arguments gather(dataframe, key, value, columns to act 
 key- what you'd like the column containing old column names to be called
 value- what you'd like the scores column to be called
 ```{r}
+datLong2<- gather(dat,key="timePoint", value="agressionScore", c("baselineAggression", "postAggression"))
 
 ```
 
 **melt**
 melt is a function in the reshape2 library. It's another way to create long data
 ```{r}
-
+library(reshape2)
 ```
 melt() uses the following arguments: 
 melt(dataframe, id.vars, measure.vars, variable.name, value.name)
 ```{r}
-
+datLong3<- melt(dat, id.vars= c("subjNo","ageGroup", "parentReportGender","condition"), measure.vars=c("baselineAggression", "postAggression"), variable.name="timePoint", value.name="aggressionScore")
+datLong3
 ```
 
-####Learning Outcome 1 Practice
-1. Open the relig_incom dataset.
-2. Restructure the dataset so that it is in long format. 
 
 ###Learning Outcome 2: Transform data from long to wide
 As above, we'll restructure the data in three ways. Again, some ways are more intuitive than others, and you just need to know how to use one (but it's good to be familiar with multiples). 
@@ -82,14 +94,18 @@ As above, we'll restructure the data in three ways. Again, some ways are more in
 The pair function for pivot_longer. It has the following arguments: 
 pivot_wider(dataset, id columns, names_from, values_from)
 ```{r}
-
+library(tidyr)
+datWide<- pivot_wider(datLong, id_cols=c("subjNo", "ageGroup", "parentReportGender", "condition"), names_from="timePoint", values_from= "aggressionScores")
 ```
 
 **spread** 
 is the pair function for gather. It has the following arguments: 
 gather(data, key, value, columns to make wide)
 ```{r}
-
+datWide2<-spread(datLong2, key="timePoint", value="agressionScore")
+colnames(datLong2)[6]<-"aggressionScore"
+colnames(dat)[colnames(dat)== "aggressionScore"] <- "aggressionScores"
+datLong2$aggressionScore<-"aggressionScore"
 ```
 
 **dcast**
@@ -98,13 +114,22 @@ dcast has the following arguments:
 dcast(data, formula)
 
 ```{r}
-
+datWide3<- dcast(datLong3, formula= subjNo+ ageGroup+parentReportGender+condition~timePoint)
 ```
 **Note:** dcast is really not intuitive. I pretty much determine the correct order through trial and error every time. 
 
 ####Learning Outcome 2: Practice
-1. Open the ChickWeight dataset. 
+1. Open the ChickWeight dataset.
+```{r}
+data(ChickWeight)
+```
 2. Convert it from long to wide format. 
+```{r}
+class(ChickWeight)
+ChickWeight<-as.data.frame(ChickWeight)
+chick<-pivot_wider(ChickWeight, id_cols = c("Chick", "Diet"), names_from="Time", values_from="weight") 
+chick
+```
 
 
 ###A note on pipes for data restructuring
@@ -117,6 +142,8 @@ dataframe %>% function(function arguments)
 **pivot_longer w/pipes**
 ```{r}
 
+dat %>% 
+  pivot_longer(c("baselineAggression","postAggression"), names_to= "timePoint", values_to="aggressionScore")
 ```
 
 ###Learning Outcome 3: Join data sets in R
@@ -124,7 +151,12 @@ Some times, we have datasets that we need to join or merge (e.g. participant dem
 
 We'll practice on the following code: 
 ```{r}
-
+subjNo<-dat$subjNo
+ageGroup<- c(rep(3,12), rep(4,12), rep(5,12), rep(6,12))
+anxietyScore<- sample(1:20, 48, replace=TRUE)
+datAnxiety<- cbind.data.frame(subjNo, ageGroup, anxietyScore)
+library(dplyr)
+datFinal<-left_join(dat, datAnxiety)
 ```
 right_join does the same thing, but places the new column to the right. 
 
@@ -141,18 +173,22 @@ As we talked about before, there are different classes(or types) of data in R. F
 *using levels()*
 Let's take the example from our final dataset (datFinal). We can change parentReportGender to have levels of "male" and "female."
 ```{r}
-
+class(datFinal$parentReportGender)
 ```
 it's currently a character, so we can change it to a factor using as.factor (which we talked about last week). Then, we can use the function levels() to change the data. 
 ```{r}
-
+dat$parentReportGender<- as.factor(dat$parentReportGender)
+class(dat$parentReportGender)
+summary(dat$parentReportGender)
+levels(dat$parentReportGender)<- c("female", "male")
+levels(dat$parentReportGender)
 ```
 
 Note: because I saved these as different columns, I can directly compare the data held in each to ensure I've changed everything correctly. 
 
 Also, keep in mind that changing levels of a factor requires you to know **know what levels are currently in your data.** You can check this by either printing the column as I've done above, or using the levels command:
 ```{r}
-
+dat$gender<- factor(dat$parentReportGender, levels= c("male", "female"))
 ```
 I'd recommend this version, particularly if you have a large data set. 
 
@@ -165,11 +201,12 @@ I'd recommend this version, particularly if you have a large data set.
 You may have noticed that writes levels of a factor in alphabetical order. Sometimes, this is really helpful. Other times, it can complicate statistical models and graphs because there are more meaningful ways to reorder your data. You can reorder the data using relevel. 
 It has the general structure relevel(column, reference level)
 ```{r}
-
+dat$gender<-relevel(dat$gender, "female")
 ```
 If you have more levels, you can use specify the order in your factor function 
 ```{r}
-
+dat$condition<-factor(dat$condition, levels=c("Inclusion","Exclusion"))
+levels(dat$condition)
 ```
 ####Practice
 1. Reorder the parentReportGender variable in your final dataset so that female is the reference category. 
@@ -180,11 +217,15 @@ recode(column to be coded, what recode looks like)
 
 I'm going to make a new column to demonstrate this.Let's say it's for a single Anxiety item that ranges from 1 to 6
 ```{r}
-
+dat$AnxietyOne<- rep(1:6, (nrow(dat)/6))
+dat$AnxietyOne
 ```
 To reverse code it, we would write
 ```{r}
-
+library(car)
+dat$AnxietyOneR<- recode(dat$AnxietyOne, '1=6;2=5;3=4;4=3;5=2;6=1')
+dat$AnxietyOneRR<- 7-dat$AnxietyOne
+datFinal$AnxietyOneR<-car::recode(datFinal$AnxietyOne, '1=6; 2=5;3=4;4=3;5=2;6=1')
 ```
 Note: you'll notice that I wrote "car::" before the record function. This is necessary sometimes. Remember, the libraries are made by **different** people. People use the same words for different functions. So we need to tell R which of the functions we want to use. 
 
@@ -194,7 +235,8 @@ separate uses the following arguments:
 separate(data, columns, into, sep)
 let's look at the subject column in our dataset
 ```{r}
-
+dat$subjNo
+View(separate(dat, subjNo, into= c("con", "subj"), sep=1))
 ```
 
 **Mutate** 
@@ -202,12 +244,17 @@ When you are cleaning data, there are occasionally instances where you need to u
 
 To practice using Mutate, we're going to use a messier dataset
 ```{r}
-
+data(starwars)
 ```
 
 If you open the dataset, you can see that we have both height and mass variables. You can see that height is in cm, so we can convert height to inches
 ```{r}
-
+"starwars %>% 
+  mutate(heightIn= height *.393701) %>% 
+  select(height,heightIn)"
+starwars %>% 
+  mutate(heightInch= height*0.39701) %>% 
+  select(name,height, heightInch)
 ```
 
 
