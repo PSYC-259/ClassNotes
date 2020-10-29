@@ -315,5 +315,16 @@ ifelse(mean(mtcars$mpg)>18, "good", "bad")
 
 ####Learning Outcome 5 Practice: 
 1. Make an if statement to determine if the average weight of a chick is greater than 100 grams.  
+```{r}
+if(ChickWeight$weight>100){
+print("heavier than 100 grams" 
+}
+OR 
+ifelse(ChickWeight$weight>100, "TRUE","FALSE")
+```
 2. create a new column in the mtcars data set to indicate whether a car has a manual or automatic transmission. 
+```{r}
+mtcars$transmission<- NA #you don't actually have to use if statements to fill this column in but putting it here as a practice
+mtcars$transmission<- ifelse(mtcars$am==0, "automatic", "manual")
 
+```
