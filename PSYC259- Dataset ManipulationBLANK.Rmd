@@ -162,8 +162,15 @@ right_join does the same thing, but places the new column to the right.
 
 ####Learning Outcome 3 Practice
 1. Create a dataframe (n=48) that includes subject numbers and executive function scores (ranging from 0-16).
+```{r}
+subjNo<-dat$subjNo
+EF<- sample(1:16, 48, replace=TRUE)
+efscore<-cbind.data.frame(subjNo, EF)
+```
 2. Join your dataset in #1 to the original Aggression dataset. 
-
+```{r}
+left_join(dat, efscore)
+```
 ###Learning Outcomes 4 & 5: Use functions to clean data (and pipes)
 Now that we've covered how to restructure data, we'll talk about ways to clean it. These are just some of the functions I find myself using, and there are certainly more. This section is a bit longer, so there will be practice questions mixed in. 
 
@@ -194,9 +201,17 @@ I'd recommend this version, particularly if you have a large data set.
 
 ####Practice: 
 1. Create a column in the final dataset that contains condition as a factor. 
+```{r}
+dat$conditionTwo<-as.factor(dat$condition)
+```
 2. Change the levels to "e" for exclusion and "i" for inclusion. 
+```{r}
+levels(dat$conditionTwo)<- ("e", "i") #remember to check the order they are in in your dataset!!! 
+```
 3. Check that you have done this successfully. 
-
+```{r}
+cbind.data.frame(dat$condition, dat$conditionTwo) # you'll know if they are the same if the rows contain the same elements. 
+``
 **reordering factors**
 You may have noticed that writes levels of a factor in alphabetical order. Sometimes, this is really helpful. Other times, it can complicate statistical models and graphs because there are more meaningful ways to reorder your data. You can reorder the data using relevel. 
 It has the general structure relevel(column, reference level)
@@ -210,7 +225,9 @@ levels(dat$condition)
 ```
 ####Practice
 1. Reorder the parentReportGender variable in your final dataset so that female is the reference category. 
-
+```{r}
+relevel(dat$gender, "female") 
+```
 **Reverse Coding**
 For those of you who have survey data, you may be interested in using a function to reverse code certain items. You can use recode() to do so. 
 recode(column to be coded, what recode looks like)
