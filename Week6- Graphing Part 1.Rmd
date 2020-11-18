@@ -1,0 +1,207 @@
+---
+title: "PSYC259-Graphs pt1"
+author: "Amanda Mae Woodward"
+date: "11/17/2020"
+output: html_document
+---
+
+#Learning Outcomes
+By the end of this class, students should be able to: 
+- Transform data to appropriate formats for graphs
+- Create bar graphs,histograms, scatterplots, line graphs, and box plots in R 
+- Change aesthetic properties of graphs, including themes and colors
+- Incorporate third variables into graphs 
+
+**Notes:** There are several ways that you can graph in R. In today's class, we'll be focusing primarily on ggplot. It's my personal favorite way to graph because you can customize so many things. We won't be able to go through all of them, but today's class will serve as an introduction to graphing and an introduction to different types of customization. 
+
+###Learning Outcome 1: Transform data to appropriate formats for graphs
+We've already talked about how to transform data into wide and long format. For some of you, you may need to create a data frame that contains summary statistics to graph (e.g. bar graphs). Before we talk about how to make the graphs, I'm going to show you one way you can make a summary data frame. 
+
+**summarySE**
+To do this, we're going to use a function called summarySE. It's in the Rmisc package
+```{r}
+
+```
+
+The structure for summarySE is: 
+summarySE(data, measurevar(the variable you want to summarize), grouping variables, confidence interval)
+
+We'll try this with the diamonds dataset (located in ggplot). Specifically, we'll create a summary of price by color. 
+
+```{r}
+
+```
+
+####Learning Outcome 1: Practice 
+1. Open the mtcars dataset. Create a dataset containing a summary of the mpg by cylinder (cyl).
+
+
+###Learning Outcomes 2 & 3:Create bar graphs,histograms, scatterplots, line graphs, and box plots in R. Change aesthetic properties of graphs, including themes and colors
+
+To create graphs, we'll be using ggplot. While some customizations are general (you can do them to any graph), others may feel more specific to one or two types of graphs. As we go through some examples, I'll try to point out which are general or specific. If you have questions, **please be sure to ask**.
+
+We also won't be able to cover everything this week. If you have questions, let me know in the chat and I will do my best to include them next week. 
+
+**Notes about ggplot2**
+ggplot makes graphs in layers. I'll try to demonstrate:
+
+Here is an "empty graph" 
+```{r}
+
+```
+You'll notice that the Plot window opened on my version of R and contains a gray background. This is a default "empty graph."
+
+The next step is to include a dataset and to include an argument called aesthetics. It will look something like this: 
+
+ggplot(data, aes(x,y))
+
+In our case, we'll use the diamonds dataset again and see what happens when we include an x variable. 
+```{r}
+
+```
+
+You'll notice that now we have an x axis, labeled price with values on it. 
+
+This ggplot() section is the base of our graph. We add additional parts using a + sign. 
+
+**histogram** 
+We'll start with histograms because we only need one variable to make one. To do this, we can add +geom_histogram() to our code above. 
+
+```{r}
+
+```
+
+**Changing the background**
+I really don't like the gray background (personal preference). So the first customization we'll do is remove the background using a themes argument.
+```{r}
+
+```
+It can be used with any graph. 
+
+**Changing colors** 
+There are two additional arguments we can use to change the colors; color and fill. color will change the lines of the bars and fill will change the color of the bars. (this will be true for both histograms and bar graphs). 
+
+```{r}
+
+```
+**Note**You can also put the color and fill arguments in the aes() section. As your graphs get more complicated, you will notice that placement matters and will result in slightly different graphs. We're not going to go that far today though.
+
+**Just because you can use a color scheme, doesn't mean you should** 
+
+####Histogram Practice: 
+1. Create a histogram of the carat variable. 
+2. Include a theme to change the appearance of your graph.
+3. Create a histogram with orange bars and purple lines.  
+4. **Bonus** Create a histogram with the worst color combination you can think of. 
+
+**Bar graph** 
+Next, we'll talk about how to make a bar graph. We can do this the same way we make a histogram, but will use geom_bar(). 
+
+We'll practice on the "color" column. (I'll use another theme so you can see the differences)
+
+```{r}
+
+```
+
+**Changing the x and y label axes** 
+You'll notice that our y axis is "count" and our x axis is "color". These are not particularly informative. We can change these using xlab and ylab. 
+```{r}
+
+```
+
+**Using means in bar graphs**
+Sometimes, we don't just want the count of a category to make a bar graph. For instance, we may want to use a mean. We can do this by using the summary data frame we made before. 
+```{r}
+
+```
+
+**standard errors**
+Using this dataset also allows us to include standard error bars or confidence intervals in our plots. We do this by adding a layer called geom_errorbar(). 
+```{r}
+
+```
+**Note:** there are several cases where the you may to include the argument position_dodge() to get the standard error bars to align with the actual bars on your graph. We may go through an example of this later, but if we don't have time, R cookbook has really good examples of how to do this. 
+
+####Practice: 
+1. Create a bar graph for the cut column. 
+2. Change the x and y labels to something that is more informative. 
+
+**Scatter plot**
+We can make scatter plots using the argument geom_point(). We'll make a graph of carat by price. 
+```{r}
+
+```
+
+**Note:**In this case, geom_point() is the best option to make our scatter plot. If you work with small datasets, the points may be overlapping and make it look like you have less data. In these cases, you can use geom_jitter(), which will offset the dots slightly and allow you to see each participant.  
+
+**Inserting a regression line**
+We can include a regression line into our graph using geom_smooth().
+```{r}
+
+```
+We can customize whether the regression line has a confidence interval surrounding it. You may be asking yourself **what confidence interval**. Carat and price are very highly correlated. let's use an mtcars example to see how we can change it. 
+```{r}
+
+```
+
+**Changing scatterplots**
+you can change the outline of a dot using "color" 
+```{r}
+
+```
+
+you can also change the shape and the size of the points by adding shape and size arguments to geom_point. 
+```{r}
+
+```
+
+####Practice: 
+1. Create a scatter plot of the table and carat variables. 
+2. Change the color of the points to your favorite color. 
+3. Change the shape of the points. 
+4. Add a line of best fit to your scatter plot. 
+
+**Line graphs**
+Line graphs follow a similar to scatterplots, but use the geom_line function. Color customizations follow the same rules as scatterplots. 
+```{r}
+
+```
+I won't talk as much about these graphs, but happy to answer questions. 
+
+**Box plots**
+I hope that the pattern is starting to make sense, but the only difference with a box plot is that you'll use geom_boxplot(). 
+```{r}
+
+```
+####Practice: 
+1. Create a boxplot for carat.
+2. Create boxplots of carat for each level of cut.
+3. **Bonus** play around with fill and color. What changes about your boxplots? 
+
+###Learning Outcome 4:Incorporate third variables into graphs
+There are many ways that we can include third variables. 
+
+For bar graphs: 
+```{r}
+
+```
+
+
+For scatter plots: 
+```{r}
+
+```
+
+Rather than having all bars/dots/lines the same color, you can have them change by using various packages and by looking up a few color codes online. 
+
+If you don't like the colors, we can specify specific ones using scale_fill_ discrete OR using a package called R color brewer. 
+
+We'll walk through these together because I think it's helpful to see what color combinations exist and how you can use them in a bar graph or a scatter plot.
+
+I'll also show you how you can get color pallets online and find the associated color code. 
+
+####Learning Outcome 4 Practice. 
+1. Create a graph of cyl and mpg in the mtcars dataset. 
+2. In some way, include am as a third variable in this graph. 
+3. Create a graph of mpg and hp. 
+4. In some way, include gear as a third variable. 
