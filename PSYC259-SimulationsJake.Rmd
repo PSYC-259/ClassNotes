@@ -1,0 +1,456 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Learning Outcomes
+
+- Learn how to generate and sample from pseudo-random data
+- Learn about distribution functions and how to use them
+- Learn about how to simulate a t-test
+- Learn about how to apply simulated t-tests for understanding power and false positive rate
+- Learning about bootstrapping
+
+```{r}
+library(ez) # this is a package for ANOVAs that I prefer over base R's ANOVA package
+library(lme4) # for mixed models
+library(lmerTest) # for significance testing in mixed models
+library(ggplot2) # for plotting
+```
+
+# Learning Outcome 1: Generating random data and sampling from data
+
+## Uniform Distribution
+
+A uniform distribution is a relatively flat distribution of pseudo-random numbers. If you want to draw numbers randomly, not according to any distribution, this is what you'd use.
+
+```{r}
+x = runif(400, 0, 100) # generate 400 numbers from 0 to 100 from uniform dist
+x # print numbers
+hist(x, breaks = 100) # histogram of these numbers. breaks just determines how many bars you want to use for your histogram. if there's a lot of data, you probaby want more granularity
+```
+Note that runif will return decimals, so if you want whole numbers you can run:
+```{r}
+x = as.integer(round(runif(400, 0, 100))) # 400 numbers from 0 to 100 rounded
+x
+hist(x, breaks = 100)
+```
+
+## Sampling
+
+Sampling is when you take a sample from a specific array of numbers, either with or without replacement.
+
+Sample with replacement
+```{r}
+sample(c(1,3,5,7,9), 3, replace = TRUE)
+```
+Sample without replacement
+```{r}
+sample(c(1,3,5,7,9), 3, replace = FALSE)
+```
+
+## Normal Distribution
+
+More useful is rnorm which allows you to generate random numbers from a normal distribution. See below:
+
+```{r}
+x = rnorm(1:500)
+data.frame(x)
+hist(x, breaks = 100)
+```
+
+## Learning Outcome 1: Practice
+
+1. Generate a normal distribution with a mean of 10 and a SD of 2.5 with 100 numbers
+2. Randomly sample without replacement 10 numbers from the distribution created in #1
+
+# Learning Outcome 2: Learn about distribution functions and how to use
+
+## Distribution Functions
+
+rnorm is a NORMAL distribution random number generating function, but it is part of a family of other normal distribution functions, and an even broader family of other distribution functions (e.g. gamma, exponential, poisson)
+
+r_[distribution type] = random number generation
+d_[distribution type] = probability density function
+  Probability of observing a value at a given point in the distribution
+p_[distribution type] = cumulative density function
+  Basically sums up probability density distribution less than/more than or equal to value. Can be used to compute p-values.
+q_[distribution type] = quantile function
+  Inverse of pnorm (CDF); allows you to map from probabilities to values rather than from values to probabilities
+
+We already covered rnorm so let's check out dnorm. dnorm will return the probability of a value given a distribution. So for example for data with the following values:
+
+```{r}
+scores <- 0:175 # predefine range of possible scores
+meanScore <- 82 # mean from your sample
+sdScore <- 18.6 # sd from your sample
+```
+
+A value of 82 is likely since it is the peak of the distribution:
+
+```{r}
+dnorm(82, meanScore, sdScore)
+```
+
+In a plot this would look like:
+
+```{r}
+x <- seq(scores[1], scores[length(scores)], length=20000) # create a sequence of numbers for distribution to range from
+test <- dnorm(x, mean = meanScore, sd = sdScore) # produce probability density function for given parameters
+qplot(x = x, y = test, geom = "line", xlab = "Distribution", ylab = "Scores") +
+  theme_minimal(base_size = 20) + geom_vline(xintercept = 82, color = "red")
+```
+
+This may not seem like a very high probability but keep in mind it's just a slice within the entire distribution. If you sum all the probabilities across the probability density function, it amounts to 1.
+
+```{r}
+sum(dnorm(seq(-100:200), meanScore, sdScore))
+```
+
+Whereas a value of 54 (1.5 SDs away from mean) is pretty unlikely:
+
+```{r}
+dnorm(54, meanScore, sdScore)
+qplot(x = x, y = test, geom = "line", xlab = "Distribution", ylab = "Scores") +
+  theme_minimal(base_size = 20) + geom_vline(xintercept = 54, color = "red")
+```
+
+pnorm will return the probability below or equal to a value, or above a value
+
+```{r}
+pnorm(82, meanScore, sdScore)
+```
+Let's try 54.
+
+```{r}
+pnorm(54, meanScore, sdScore)
+```
+
+pnorm can easily be used to calculate your p-value give your sample, mean, SD, and the assumed population mean.
+
+Finally, with qnorm, instead of mapping values to probabilities, it maps probabilities to values. See below:
+
+```{r}
+qnorm(.5, meanScore, sdScore)
+```
+See how it returns the same value as entered in before?
+
+```{r}
+qnorm(.066, meanScore, sdScore)
+```
+
+These tools can be useful for many things but one useful application can be for simulating data.
+
+## Learning Outcome 2: Practice
+
+1. What's the probability of getting a value below or equal to 87 given a normal distribution with a mean of 100 and an SD of 25?
+2. What value corresponds to a left-tailed probability of .025 for a normal distribution with a mean of 10 and an SD of 2.5?
+3. What is the probability of a value that exactly corresponds to 52 for a normal distribution with a mean of 40 and an SD of 10?
+
+# Learning Outcome 2: Simulate Data for a Statistical Model (T-Test)
+
+## One-Sample T-Test: Create function for simulation
+
+Let's start with the most basic possible simulation. We want to simulate data that takes a sample mean and compares it to a population mean. This would be a one-sample t-test. To generate date for this, you generate random numbers sampled from a normal distribution.
+We'll start by creating a function for doing this:
+```{r}
+simOneSampT <- function(items, mean, sd){
+  dist <- rnorm(items, mean = mean, sd = sd) # how many items in your sample, what is mean of your sample, how much variation? draw random numbers from normal distribution based on your parameters
+  data <- data.frame(DV = dist) # put this column of data into a dataframe
+  return(data) # return the data
+}
+```
+
+## One Sample T-Test: Simulate data
+
+Then, we can apply it. Let's pretend that this is for test scores which are bounded by 0 and 100. In the example, we talk about test scores where the population average is 78 and the sample mean was 82, and the sample standard deviation is 18.6. Let's simulate that data for a one-sample t-test:
+
+```{r}
+set.seed(112) # set a random seed for reproducibility
+# Let's use the sample values from earlier example of a standardized test
+meanScore <- 82 # mean from your sample
+sdScore <- 18.6 # sd from your sample
+meanPop <- 78 # mean from population
+n <- 200 # number of items
+output<-simOneSampT(n, meanScore, sdScore) # simulate the data!
+```
+
+Now let's use the data we simulated:
+
+```{r}
+output$DV[output$DV > 100] <- NA # remove over 100 and under 0 since the test scores are bounded by 0 and 100
+output$DV[output$DV < 0] <- NA # remove under 0
+output <- output[!is.na(output$DV),] # remove NA
+output <- data.frame(DV = output) # save to output
+t.test(output$DV, mu = meanPop) # okay, let's execute the test given the simulated data
+```
+
+## Independent Samples T-Test: Create function for simulation
+
+What if we want to compare two sample means? An independent samples t-test is basically just doubling it with two separate samples of randomly generated numbers from a normal distribution.
+
+```{r}
+simIndSampT <- function(items, mean1, mean2, sd1, sd2){
+  dist1 <- rnorm((items/2), mean = mean1, sd = sd1) # generate a normal distribution for sample 1
+  dist2 <- rnorm((items/2), mean = mean2, sd = sd2) # generate a normal distribution for sample 2
+  data <- data.frame(DV = c(dist1,dist2), IV = c(rep(0,(items/2)), rep(1, items/2) ) ) # put them both into a dataframe
+  return(data) # return the dataframe
+}
+```
+
+## Independent Samples T-test: Simulate data and run test
+
+Let's test it again with some random parameters. Let's assume one sample has a mean of 1.1 and a SD of 1.9, and the second sample has a mean of 1.5 and an SD of 1.5.
+
+```{r}
+sampleMean1 <- 1.1 # set values
+sampleMean2 <- 1.5
+sd1 <- 1.9
+sd2 <- 1.5
+set.seed(112) # set seed for reproducibility
+output <- simIndSampT(items = 400, mean1 = 1.1, mean2 = 1.5, sd1= 1.9, sd2= 1.5) # sim data!
+output # let's check it out
+t.test(DV ~ IV, data = output) # and let's run the t-test
+```
+
+Now, let's try some of the fun stuff you can do with simulating data.
+
+## Learning Outcome 3: Practice
+
+1. Using the custom function, simulate data for a t.test.
+2. Use a t-test on the data you simulated.
+
+# Learning Outcome 4: Practical Applications for Simulations (e.g. FP Rate and Power)
+
+Okay, so we're simulating data. Cool. What does this buy us? Well, one thing we can do is execute simulations in order to get a hang of the false positive rate as well as our power. For example, you can simulate data with parameters that match your data, and observe how high the false positive rate is with few instances and how long it takes to get closer to our alpha/critical value over many simulations.
+
+## False Positive Rate
+
+Let's first try a worst case scenario. I didn't collect almost any data per level of my IV, and also my DV is very noisy.
+
+```{r}
+set.seed(120)
+df <- as.data.frame(matrix(ncol = 3)) # create an empty dataframe with three columns
+for(i in 1:1500){
+  cMean <- rnorm(1, 1, 1) # same mean for both
+  cSd <- 15 # keep the standard deviation the same for the two samples
+  output <- simIndSampT(items = 20, mean1 = cMean, mean2 = cMean, sd1 = cSd, sd2 = cSd) # simulate data given two samples with same mean and same SD
+  tout <- t.test(DV ~ IV, data = output) # compute a t-test; let's save the output
+  # create a dataframe of t-statistics, p-values, and effect sizes
+  df[i,] <- data.frame(tstat = tout$statistic, p = tout$p.value, d = effsize::cohen.d(DV ~ as.factor(IV), data = output)$estimate) # we are saving the t-statistic, the p-value, and using "effsize" package's cohen.d function to save the cohen's d, as well
+}
+names(df) <- c("tstat", "p", "d") # name columns
+```
+Let's view the distribution for what we produced
+```{r}
+hist(df$tstat, breaks = 100)  # t statistic generally centered around 0
+hist(df$p, breaks = 100) # Alright, p-values are relatively uniform as they should be
+hist(df$d, breaks = 100) # Cohen's d generally around 0
+```
+
+## What's our false positive rate?
+
+i.e. What percentage of the time is the null rejected, despite these being identical distributions?
+
+```{r}
+rate<-length(df$p[df$p<.05])/nrow(df) # how many p-values under .05 are there out of the total length of df
+perc<-round(rate * 100,3) # convert to a percentage
+paste0("Your false positive rate is ",perc,"%") # print this as a pretty sentence
+```
+
+Oh nooooooo, 5.867% is our false positive rate with that noisy DV and low sample, which is obviously above our alpha so that's bad. If you replace the parameters in here with a larger sample and a smaller SD, you will find that the total false positive rate decreases.
+
+## Plot Cumulative False Positive Rate
+
+We can also save these values across many simulations and observe how the false positive rate changes across more iterations.
+
+Let's prepare and initialize everything we need:
+```{r}
+set.seed(15012345) # set seed for reproducibility
+simsPer <- 1000 # how many simulations per subject?
+cSd <- 5 # standard deviation for two groups-- We could given the two groups different SDs if we want
+simDf <- as.data.frame(matrix(ncol = 4, nrow = simsPer)) # re-initialize an empty dataframe for each subject quantity, for each 1000 simulations
+fpCol <- matrix(ncol = 2, nrow = simsPer) # let's create a dataframe for storing the iteration and the false positive rate
+```
+Let's iterate and store everything across many simulations:
+```{r}
+  for(j in 1:simsPer){ # doing a ton of simulations per sample
+  cMean1 <- rnorm(1, 1, 1) # mean for group 1
+  output <- simIndSampT(items = 60, mean1 = cMean1, mean2 = cMean1, sd1 = cSd, sd2 = cSd) # vary means around normal distribution
+  tout <- t.test(DV ~ IV, data = output) # do that t-test
+  # create a dataframe of t-statistics, p-values, and effect sizes
+  simDf[j,] <- data.frame(tstat = tout$statistic, p = tout$p.value, d = effsize::cohen.d(DV ~ as.factor(IV), data = output)$estimate, typeI = tout$p.value < .05) # save t-test stats. the same values as the previous example but also saving anything below .05 is a type I error
+  }
+  names(simDf) <- c("tstat", "p", "d","typeI") # name columns
+```
+The data has been saved but we need to compute the false positive rate across the simulations now:
+```{r}
+  for(i in 1:nrow(simDf)){
+    fpCol[i,] <- c(i, mean(simDf[1:i,colnames(simDf)=="typeI"]) ) # go through all of the simulations and take the cumulative false positive rate so far. the mean of type I errors thus far is cumulative false positive rate
+  }
+  fpCol <- as.data.frame(fpCol) # save as dataframe
+  names(fpCol) <- c("simulation", "fpRate") # name columns
+
+fpCol$fpRate<-round(fpCol$fpRate * 100,3) # convert proportion to percentage cuz' it looks prettier
+```
+
+## Plot False Positive Rate
+
+```{r}
+ggplot(fpCol, aes(x=simulation, y =fpRate)) + geom_line() +
+  xlab("Simulations Number") +
+  ylab("Cumulative False Pos. Rate") +
+  geom_abline(intercept = 5, slope = 0, color = 'red')  + # geom_abline allows you to include a line of whatever slope and position you want. For me, I want it to be at 5, where our alpha/critical value is, to denote that anything below is a false positive
+  ggtitle("Cumulative False Positive Rate Across Simulations")
+```
+
+Cool! Notice how the false positive rate is inflated after a small number of iterations but stabilizes at approximately 5% (our alpha) after about 1000 simulations.
+
+## Power
+
+Okay, now let's consider power. We want to be able to detect our effect at least 80% of the time. Let's set the standard deviation to be equivalent across the DVs. It seems like a DV that is double the other with an equivalent variance should be considered a decent effect, right? Well, having a small sample may complicate things.
+
+```{r}
+set.seed(120)
+df <- as.data.frame(matrix(ncol = 3))
+for(i in 1:1500){
+  cMean1 <- rnorm(1, 1, 1)
+  cMean2 <- rnorm(1, 2, 1)
+  cSd <- 1
+  output <- simIndSampT(items = 20, mean1 = cMean1, mean2 = cMean2, sd1 = cSd, sd2 = cSd) # vary means around normal distribution
+  tout <- t.test(DV ~ IV, data = output)
+  # create a dataframe of t-statistics, p-values, and effect sizes
+  df[i,] <- data.frame(tstat = tout$statistic, p = tout$p.value, d = effsize::cohen.d(DV ~ as.factor(IV), data = output)$estimate)
+}
+names(df) <- c("tstat", "p", "d") # name columns
+hist(df$tstat, breaks = 100)  # t statistic generally centered around 0
+hist(df$p, breaks = 100) # Alright, p-values are relatively uniform as they should be
+hist(df$d, breaks = 100) # Cohen's d generally around 0
+
+# What's our power?
+# i.e. What percentage of the time is the null correctly rejected?
+rate<-length(df$p[df$p<.05])/nrow(df)
+perc<-round(rate * 100,3)
+paste0("Your power is ",perc,"%")
+```
+
+Aw man, despite the mean being double the other IV's mean, we can only detect the effect about 60% of the time. :(
+
+```{r}
+set.seed(120)
+df <- as.data.frame(matrix(ncol = 3))
+for(i in 1:1500){
+  cMean1 <- rnorm(1, 1, 1)
+  cMean2 <- rnorm(1, 2, 1)
+  cSd <- 1
+  output <- simIndSampT(items = 400, mean1 = cMean1, mean2 = cMean2, sd1 = cSd, sd2 = cSd) # vary means around normal distribution
+  tout <- t.test(DV ~ IV, data = output)
+  # create a dataframe of t-statistics, p-values, and effect sizes
+  df[i,] <- data.frame(tstat = tout$statistic, p = tout$p.value, d = effsize::cohen.d(DV ~ as.factor(IV), data = output)$estimate)
+}
+names(df) <- c("tstat", "p", "d") # name columns
+hist(df$tstat, breaks = 100)  # t statistic generally centered around 0
+hist(df$p, breaks = 100) # Alright, p-values are relatively uniform as they should be
+hist(df$d, breaks = 100) # Cohen's d generally around 0
+
+# What's our power?
+# i.e. What percentage of the time is the null correctly rejected?
+rate<-length(df$p[df$p<.05])/nrow(df)
+perc<-round(rate * 100,3)
+paste0("Your power is ",perc,"%")
+```
+
+By increasing the sample to 400, we are able to detect the effect 91% of the time! Yayyyyy
+
+But what if I want to determine exactly the number of participants I need to achieve an 80% probability of detecting an effect given the assumed SD and means between the two groups?
+
+```{r}
+subjects <- seq(20,400,by=20) # from what subjects to what subjects to you what to determine power for?
+powerDf <- matrix(nrow = length(subjects), ncol = 2) # create an empty dataframe to incorporate the power for a given participant
+simsPer <- 1000 # how many simulations per sample amount?
+cSd <- 2 # standard deviation for two groups-- We could have given the two groups different SDs if we want
+
+for(i in 1:length(subjects) ){
+  simDf <- as.data.frame(matrix(ncol = 3, nrow = simsPer)) # re-initialize an empty dataframe for each subject quantity, for each 1000 simulations
+  
+  for(j in 1:simsPer){ # doing a ton of simulations per sample
+  cMean1 <- rnorm(1, 1, 1) # mean for group 1
+  cMean2 <- rnorm(1, 2, 1) # mean for group 2
+  output <- simIndSampT(items = subjects[i], mean1 = cMean1, mean2 = cMean2, sd1 = cSd, sd2 = cSd) # vary means around normal distribution
+  tout <- t.test(DV ~ IV, data = output) # do that t-test
+  # create a dataframe of t-statistics, p-values, and effect sizes
+  simDf[j,] <- data.frame(tstat = tout$statistic, p = tout$p.value, d = effsize::cohen.d(DV ~ as.factor(IV), data = output)$estimate) # save t-test stats
+  }
+  
+  names(simDf) <- c("tstat", "p", "d") # name columns
+  rate<-length(simDf$p[simDf$p<.05])/nrow(simDf) # what proportion of p-values are significant?
+  perc<-round(rate * 100,3) # convert proportion to percentage cuz' it looks prettier
+  powerDf[i, ] <- c(perc, subjects[i]) # save each percentage and subject quantity to a new row
+  # ... and continue
+}
+powerDf <- as.data.frame(powerDf)
+names(powerDf) <- c("power", "sample")
+```
+
+## Plot Power
+
+Okay, let's see how changing the sample changes our ability to detect an effect between a mean of 1.1 and 1.2.
+
+```{r}
+ggplot(powerDf, aes(x=sample, y =power)) + geom_line() +
+  xlab("Sample") +
+  ylab("Power") +
+  geom_abline(intercept = 80, slope = 0, color = 'red') +
+  xlim(c(0,400)) + ylim(c(0,100)) +
+  ggtitle("Power Across Sample Sizes")
+```
+
+This is just a brief demonstration of some of the utility of simulating data, for understanding how tweaking the parameters of your data can lead to differences in inferences, false positive rate, and power.
+
+# Learning Outcome 4: Using Simulations for Bootstrapping
+
+## Bootstrapping Correlated Data
+
+Sometimes you may see that correlations have confidence intervals or your indirect effect in a mediation model has confidence intervals. How do you do that? Well, you bootstrap your data to create a population distribution from your sample, by sampling with replacement from your data and compute the correlation over and over again.
+
+```{r}
+set.seed(120)
+bootstrap <- function(x, y, iter){
+  mat <- matrix(nrow = iter) # create an empty matrix with the amount of rows for the amount of iteractions
+  for(i in 1:iter){ # begin sampling
+  samp <- sample(1:length(x), replace = TRUE) # sampling WITH REPLACEMENT is integral to bootstrapping
+  oldData <- cbind(data.frame(x=x,y=y)) # let's bind them together to make them a dataframe
+  new_data <- oldData[samp, ] # let's take those samples from the old data and make them a new dataframe
+  mat[i] <- cor(new_data$x, new_data$y) # and let's correlate it
+  }
+  return(mat)
+}
+
+booted <- bootstrap(df$x1,df$x2, 1000) # let's run it!
+
+hist(booted, breaks = 100) # what does it look like?
+```
+
+cool-- there's your normal distribution of correlations from your own sample
+... But you may want more than merely the sample, you might want the descriptives, and importantly, your confidence intervals from your bootstrapped distribution
+
+```{r}
+bootedDescribe <- function(x, y, iter){
+  mat <- bootstrap(x,y,iter) # run the boostrap function
+  thisSd <- sd(mat) # return the standard deviation
+  thisMean <- mean(mat) # return the mean
+  n <- length(mat) # how large is sample
+  error <- qnorm(0.975)*thisSd/sqrt(n) # computing the confidence interval... qnorm(.975) returns the Z-score for that percentage
+  df <- data.frame(mean = thisMean, sd = thisSd, lowerCI = quantile(mat, .025), upperCI = quantile(mat, .975) ) # put it all in a table
+  return(df)
+}
+
+bootedDescribe(df$x1,df$x2, 1000)
+```
+
+## Learning Outcome 4: Practice 1
+
+1. Simulate two variables and bootstrap the correlation between them
+2. Identify the bootstrapped confidence interval
