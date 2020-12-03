@@ -1,0 +1,175 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+# Simulate wide data
+
+Don't really worry about the code here. I am just simulating a fake dataset with subject IDs that go "subj_##_DATE", as well as gender, age, and 400 data points (with mean of 4 and SD of 2.5).
+
+```{r}
+Df1 <- data.frame("subID"= paste0("subj_",seq(1:400),"_",sample(seq(as.Date('2019/01/01'), as.Date('2020/11/23'), by="day"), 400)), "age" = sample(18:35, 400, replace=T), "gender" = ifelse(runif(400) > 0.5, "Male", "Female"), replicate(100,rnorm(400,4,2.5)))
+Df2 <- data.frame("subID"= paste0("subj_",seq(1:400),"_",sample(seq(as.Date('2019/01/01'), as.Date('2020/11/23'), by="day"), 400)), "age" = sample(18:35, 400, replace=T), "gender" = ifelse(runif(400) > 0.5, "Male", "Female"), replicate(100,rnorm(400,4,2.5)))
+Df3 <- data.frame("subID"= paste0("subj_",seq(1:400),"_",sample(seq(as.Date('2019/01/01'), as.Date('2020/11/23'), by="day"), 400)), "age" = sample(18:35, 400, replace=T), "gender" = ifelse(runif(400) > 0.5, "Male", "Female"), replicate(100,rnorm(400,4,2.5)))
+Df4 <- data.frame("subID"= paste0("subj_",seq(1:400),"_",sample(seq(as.Date('2019/01/01'), as.Date('2020/11/23'), by="day"), 400)), "age" = sample(18:35, 400, replace=T), "gender" = ifelse(runif(400) > 0.5, "Male", "Female"), replicate(100,rnorm(400,4,2.5)))
+```
+
+Let's examine
+
+```{r}
+Df1
+```
+
+
+# Extract only the columns that contain the ratings
+
+```{r}
+# all of our item labels are X and # put together. So let's create a vector of X1 through X100
+itemLabels <- paste0("X",seq(1:100)) # info item labels
+# let's test it and see if it works
+Df1[itemLabels]
+# nice, you subsetted only the columns with the item names as their variable names
+```
+
+# Change it from wide to long using our concatenated character labels
+
+```{r}
+# use for the column inputs the labels that we just created
+longDf1 <- pivot_longer(Df1, cols=all_of(itemLabels), names_to= "items", values_to= "eval", values_drop_na = FALSE)
+# nice, it works-- You now have a long dataframe
+longDf1
+```
+
+# Change all four of the dataframes from wide to long
+
+You could just write out the pivot_longer function four times for each of the four dataframes but that's inefficient. This is inefficient way:
+
+```{r}
+longDf1 <- pivot_longer(Df1, cols=all_of(itemLabels), names_to= "items", values_to= "eval", values_drop_na = FALSE)
+longDf2 <- pivot_longer(Df2, cols=all_of(itemLabels), names_to= "items", values_to= "eval", values_drop_na = FALSE)
+longDf3 <- pivot_longer(Df3, cols=all_of(itemLabels), names_to= "items", values_to= "eval", values_drop_na = FALSE)
+longDf4 <- pivot_longer(Df4, cols=all_of(itemLabels), names_to= "items", values_to= "eval", values_drop_na = FALSE)
+```
+
+Do you see how this is actually well-suited for a for loop? It may appear intractable because of the aspect in which the variables names themselves are different. But you can do it with some character string manipulation.
+
+Any time you can automate something instead of writing it multiple times, you should aim to do that. Here we want to iterate across each dataframe name that ends in a different number from 1 to 4.
+
+```{r}
+for(i in 1:4){
+  # create a label for the current raw, wide df
+  currentDf <- paste0("Df",i)
+  # get the dataframe that matches that character string
+  currentDf <- get(currentDf)
+  # apply pivot long
+  currentLong <- pivot_longer(currentDf, cols=all_of(itemLabels), names_to= "items", values_to= "eval", values_drop_na = FALSE)
+  # create a label for the long dataframe, with a different number for each one
+  currentName <- paste0("longDf",i)
+  # assign the variable the name in currentName so each long datafram has a unique name
+  currentLong <- assign(currentName, currentLong)
+}
+```
+
+You may notice that this is around the same amount of code as the version in which you write each version out. To clarify, being able to automate this sort of thing becomes increasingly useful as you have more datasets or complexity to handle.
+
+# Simple Gsub Example
+
+gsub replaces any item in a string with anything you want
+
+```{r}
+will <- c("I am in a glass case of emotion")
+will2 <- gsub("a", "z", will)
+will
+will2
+```
+
+# Strip Labels of Characters
+
+```{r}
+# What does our dataframe currently look like?
+longDf1
+# Because we pivoted the column names to rows, the items column has the column names but we'd prefer that to be just numbers and not X#
+class(longDf1$items) # yup, it's a character string
+# let's strip that column of it's X character and convert it to numeric
+longDf1$items <- as.numeric(gsub("X","", longDf1$items))
+# let's take a peak again
+longDf1
+# cool, it's now a numeric variable with none of those pesky X characters
+class(longDf1$items)
+```
+
+Okay, those subject IDs are all sorts of messy and including "subj" and the date. How can we remove that?
+
+Regex (regular expression) matching can do all sorts of stuff
+
+```{r}
+# you can strip all non digits. Inside brackets, ^ means non, and 0-9 means digits 0 through 9, and + means more than one so this includes 1 or 2 or 3 number subject IDs
+gsub("[^0-9]+","",longDf2$subID)
+# this doesn't do the job though because we have dates
+
+# remove subj_ prior to participant ID
+longDf2$subID <- gsub("subj_","",longDf2$subID)
+# remove the _ and everything after. "." is a wildcard and "*" means more than zero instances
+longDf2$subID <- gsub("_.*","",longDf2$subID)
+# convert subject ID to a factor
+longDf2$subID <- as.factor(longDf2$subID)
+```
+
+Cool, we should now have a subject ID variable stripped of extraneous "date" and "subj" characters:
+
+```{r}
+longDf2$subID
+```
+
+Note: This isn't the cleanest way to do this. You can do this in one step/line of code by removing everything before and after _, excluding the digits between. I was having a tough time figuring out the way to do it though so I just did it as two steps which still gets the job done.
+
+# Simple Grep Example
+
+grep takes a pattern and identifies where in the vector the pattern is located
+
+```{r}
+zoolander <- c("Hansel","so","hot","right","now")
+grep("hot", zoolander)
+```
+
+# Using Grep to Identify Columns
+
+Here's a practical example using some pretend rosenberg self-esteem data
+
+```{r}
+# simulate rosenberg self-esteem scale... pretending it's 15 items
+RSE <- data.frame(replicate(15,rnorm(400,4,2.5)))
+# assign names as 1 through 10
+names(RSE) <- paste0("RSE",1:15)
+# bind the columns to the wide df
+Df1.2 <- cbind(Df1, RSE)
+# where is the first column for RSE in the df?
+index1 <- grep("RSE1",colnames(Df1.2) )
+# let's check it out
+index1
+# Uh oh, that's not good. What's going on here?
+Df1.2[index1]
+# it's returning all column names that contain 1 in it.
+#The upside to regex is its very flexible but the downside is you need to be VERY explicit about what you want.
+#Here, ^ anchors the beginning of string to be matched and $ anchors end of string
+index1 <- grep("^RSE1$",colnames(Df1.2) )
+# where is the last column for RSE in the df?
+index2 <- grep("^RSE10$",colnames(Df1.2) )
+# let's use that to compute the participant means
+Df1.2$RSE <- rowMeans(Df1.2[, index1:index2],na.rm=TRUE)
+# all RSE columns from GREP
+Df1.2[, index1:index2]
+# the RSE mean
+Df1.2$RSE
+```
+
+This is pretty much only scratching the surface of regex pattern matching and you can do a lot more than what I described to you. But I just wanted to offer some foundation for how pattern matching can be useful, primarily in data cleaning.
+
+
+
+
