@@ -14,9 +14,6 @@ editor_options:
 - Learning about bootstrapping
 
 ```{r}
-library(ez) # this is a package for ANOVAs that I prefer over base R's ANOVA package
-library(lme4) # for mixed models
-library(lmerTest) # for significance testing in mixed models
 library(ggplot2) # for plotting
 ```
 
@@ -64,7 +61,18 @@ hist(x, breaks = 100)
 ## Learning Outcome 1: Practice
 
 1. Generate a normal distribution with a mean of 10 and a SD of 2.5 with 100 numbers
+
+```{r}
+x<-rnorm(100, 10, 2.5)
+hist(x, breaks=100)
+```
+
 2. Randomly sample without replacement 10 numbers from the distribution created in #1
+
+```{r}
+sample(x, 10, replace = FALSE)
+```
+
 
 # Learning Outcome 2: Learn about distribution functions and how to use
 
@@ -146,8 +154,23 @@ These tools can be useful for many things but one useful application can be for 
 ## Learning Outcome 2: Practice
 
 1. What's the probability of getting a value below or equal to 87 given a normal distribution with a mean of 100 and an SD of 25?
+
+```{r}
+pnorm(87, 100, 25)
+```
+
 2. What value corresponds to a left-tailed probability of .025 for a normal distribution with a mean of 10 and an SD of 2.5?
+
+```{r}
+qnorm(.025, 10, 2.5)
+```
+
 3. What is the probability of a value that exactly corresponds to 52 for a normal distribution with a mean of 40 and an SD of 10?
+
+```{r}
+dnorm(52, 40, 10)
+```
+
 
 # Learning Outcome 2: Simulate Data for a Statistical Model (T-Test)
 
@@ -175,6 +198,7 @@ sdScore <- 18.6 # sd from your sample
 meanPop <- 78 # mean from population
 n <- 200 # number of items
 output<-simOneSampT(n, meanScore, sdScore) # simulate the data!
+output
 ```
 
 Now let's use the data we simulated:
@@ -210,7 +234,7 @@ sampleMean2 <- 1.5
 sd1 <- 1.9
 sd2 <- 1.5
 set.seed(112) # set seed for reproducibility
-output <- simIndSampT(items = 400, mean1 = 1.1, mean2 = 1.5, sd1= 1.9, sd2= 1.5) # sim data!
+output <- simIndSampT(items = 400, mean1 = sampleMean1, mean2 = sampleMean2, sd1= sd1, sd2 = sd2) # sim data!
 output # let's check it out
 t.test(DV ~ IV, data = output) # and let's run the t-test
 ```
@@ -220,7 +244,16 @@ Now, let's try some of the fun stuff you can do with simulating data.
 ## Learning Outcome 3: Practice
 
 1. Using the custom function, simulate data for a t.test.
+
+```{r}
+ramen <- simIndSampT(items = 381, mean1 = 5, mean2 = 7, sd1 = 1.4, sd2 = 2.34)
+```
+
 2. Use a t-test on the data you simulated.
+
+```{r}
+t.test(ramen$DV ~ ramen$IV)
+```
 
 # Learning Outcome 4: Practical Applications for Simulations (e.g. FP Rate and Power)
 
@@ -232,8 +265,9 @@ Let's first try a worst case scenario. I didn't collect almost any data per leve
 
 ```{r}
 set.seed(120)
+nsims <- 1500
 df <- as.data.frame(matrix(ncol = 3)) # create an empty dataframe with three columns
-for(i in 1:1500){
+for(i in 1:nsims){
   cMean <- rnorm(1, 1, 1) # same mean for both
   cSd <- 15 # keep the standard deviation the same for the two samples
   output <- simIndSampT(items = 20, mean1 = cMean, mean2 = cMean, sd1 = cSd, sd2 = cSd) # simulate data given two samples with same mean and same SD
@@ -276,14 +310,14 @@ fpCol <- matrix(ncol = 2, nrow = simsPer) # let's create a dataframe for storing
 ```
 Let's iterate and store everything across many simulations:
 ```{r}
-  for(j in 1:simsPer){ # doing a ton of simulations per sample
+for(j in 1:simsPer){ # doing a ton of simulations per sample
   cMean1 <- rnorm(1, 1, 1) # mean for group 1
   output <- simIndSampT(items = 60, mean1 = cMean1, mean2 = cMean1, sd1 = cSd, sd2 = cSd) # vary means around normal distribution
   tout <- t.test(DV ~ IV, data = output) # do that t-test
   # create a dataframe of t-statistics, p-values, and effect sizes
   simDf[j,] <- data.frame(tstat = tout$statistic, p = tout$p.value, d = effsize::cohen.d(DV ~ as.factor(IV), data = output)$estimate, typeI = tout$p.value < .05) # save t-test stats. the same values as the previous example but also saving anything below .05 is a type I error
-  }
-  names(simDf) <- c("tstat", "p", "d","typeI") # name columns
+}
+names(simDf) <- c("tstat", "p", "d","typeI") # name columns
 ```
 The data has been saved but we need to compute the false positive rate across the simulations now:
 ```{r}
@@ -302,8 +336,9 @@ fpCol$fpRate<-round(fpCol$fpRate * 100,3) # convert proportion to percentage cuz
 ggplot(fpCol, aes(x=simulation, y =fpRate)) + geom_line() +
   xlab("Simulations Number") +
   ylab("Cumulative False Pos. Rate") +
-  geom_abline(intercept = 5, slope = 0, color = 'red')  + # geom_abline allows you to include a line of whatever slope and position you want. For me, I want it to be at 5, where our alpha/critical value is, to denote that anything below is a false positive
+  geom_abline(intercept = 5, slope = 0, color = 'red')  +
   ggtitle("Cumulative False Positive Rate Across Simulations")
+# geom_abline allows you to include a line of whatever slope and position you want. For me, I want it to be at 5, where our alpha/critical value is, to denote that anything below is a false positive
 ```
 
 Cool! Notice how the false positive rate is inflated after a small number of iterations but stabilizes at approximately 5% (our alpha) after about 1000 simulations.
@@ -417,6 +452,9 @@ Sometimes you may see that correlations have confidence intervals or your indire
 
 ```{r}
 set.seed(120)
+x=rnorm(100,mean=1,sd=.25)
+y=rnorm(100,mean=2.5,sd=.5)
+df <- data.frame(x1=x, x2=y)
 bootstrap <- function(x, y, iter){
   mat <- matrix(nrow = iter) # create an empty matrix with the amount of rows for the amount of iteractions
   for(i in 1:iter){ # begin sampling
@@ -442,12 +480,11 @@ bootedDescribe <- function(x, y, iter){
   thisSd <- sd(mat) # return the standard deviation
   thisMean <- mean(mat) # return the mean
   n <- length(mat) # how large is sample
-  error <- qnorm(0.975)*thisSd/sqrt(n) # computing the confidence interval... qnorm(.975) returns the Z-score for that percentage
   df <- data.frame(mean = thisMean, sd = thisSd, lowerCI = quantile(mat, .025), upperCI = quantile(mat, .975) ) # put it all in a table
   return(df)
 }
 
-bootedDescribe(df$x1,df$x2, 1000)
+bootedDescribe(df$x1,df$x2, 2500)
 ```
 
 ## Learning Outcome 4: Practice 1
