@@ -1,0 +1,140 @@
+---
+title: 'PSYC259: Miscellaneous Topics in R'
+author: "Amanda Mae Woodward"
+date: "12/9/2020"
+output: html_document
+---
+
+
+After today's class, you should know how to do the following: 
+- Trouble shoot code
+- Describe how to handle missing data in R 
+- Explain how to export graphs in high resolution
+- Describe how to use facet_wrap to create plots. 
+
+###Learning Outcome 1: Trouble shooting code
+At this point in the quarter, we've covered many different functions in R. Before we go into lecture portions, I'd like you to trouble shoot the following code chunks:
+
+
+```{r}
+thirteen<- 13
+Thirteen
+```
+
+```{r}
+vect<- 1:12
+levels(vect)
+```
+
+```{r}
+data(mtcars)
+summary(gears)
+```
+
+```{r}
+ggplot(mtcars, aes(mpg))
+```
+
+
+###Learning Outcome 2: Describe how to handle missing data in R 
+Some times, we have participants with missing data in our datasets. There are different ways that we can handle this, and specific recommendations will depend on your field and individual preferences. I'm not going to tell you which option to choose, but we'll cover a couple of functions that can be helpful. 
+
+**Determining if you have missing data** 
+You may know if you have missing data, but may not know how much depending on your data source. We can use is.na to determine if there is missing data in a column or in a dataset. 
+
+We'll use the starwars dataset to test this: 
+```{r}
+library(tidyverse)
+data(starwars)
+is.na(starwars$species)
+```
+
+You'll notice that the output tells use each row that has a missing value for the species column. If you'd just like a frequency of the number of missing and non-missing data, you can take a summary of the is.na output: 
+```{r}
+summary(is.na(starwars$species))
+```
+
+You can use this information to create a subset of your data: 
+```{r}
+starwars2<- starwars[is.na(starwars$species)!=TRUE,]
+```
+
+**na.omit and na.rm**
+Two other ways that you can remove data with missing values. 
+
+na.omit() will remove all participants with any missing data.
+```{r}
+starwars3<- na.omit(starwars)
+```
+
+**Note:** complete.cases(dataset) will accomplish the same thing as na. omit. 
+
+na.rm is an argument in most statistical functions. This will remove cases where there is missing data:
+```{r}
+mean(starwars$height)
+summary(is.na(starwars$height))
+mean(starwars$height, na.rm=TRUE)
+```
+
+Correlations have slightly different ways to remove missing data: 
+the correlation function takes the following arguments:
+cor(x,y,method, use)
+Use tells R what data to use:
+
+everything: the default- use all of the data
+```{r}
+starwars$height<- as.numeric(starwars$height)
+cor(starwars$height, starwars$mass)
+```
+complete obs: removes all cases with an NA 
+```{r}
+cor(starwars$height, starwars$mass, use="complete.obs")
+```
+can also use a pairwise approach to removing data from the correlation analysis. 
+
+####Learning Outcome 2: Practice: 
+1) Open the airquality dataset. 
+2) How many data points are missing in the ozone column?
+3) Create a subset of data with only complete cases. 
+4) Calculate a correlation between Wind and temperature using only complete observations.
+
+###Learning Outcome 3: Explain how to export graphs in high resolution
+We've talked about making graphs, but not actually exporting them. To do this there are two options. First, let's make a graph we can export. 
+```{r}
+ggplot(mtcars, aes(mpg, hp,color=cyl)) + geom_point()+ theme_classic()
+```
+Ways to export:
+1) we can use the physical export button above the Plot viewer pane. 
+- these plots tend to be low resolution (get blurry when you try to make them bigger)
+2) We can use the function ggsave() to make higher resolution graphs 
+the general structure is: 
+
+ggsave(file name you'd like to save it as, plot to save, width, height, units, dpi)
+the default is to use the last plot you made, so structure may look something like this:
+```{r}
+ggplot(mtcars, aes(mpg, hp,color=cyl)) + geom_point()+ theme_classic()
+ggsave("~/Desktop/Psyc259-Practice/mtcarsplot.tiff", width=10, height=10, units="in",dpi=300)
+dev.off()
+```
+
+###Learning Outcome 4: Describe how to use facet_wrap to create plots. 
+We've talked about ways to make graphs and include 3rd variables. Another way is to create multiple plots. You can do this using facet_wrap. 
+
+First, you make the plot of the two variables you're interested in: 
+```{r}
+library(ggplot2)
+data(diamonds)
+d<-ggplot(diamonds, aes(price, carat))+ geom_point()+theme_classic()
+```
+Notice that I've saved the graph. 
+
+Second, we add facet wrap as a layer, that will create panels based on an additional variable. 
+I think this is easier to see, so I'm going to show you what it looks like what we create multiple graphs based on cut. 
+```{r}
+d+facet_wrap(~cut)
+```
+####Learning Outcome 4: Practice
+1) create a graph of displacement and mpg from mtcars. 
+2) use facet wrap to create different graphs for each type of cylinder. 
+
+

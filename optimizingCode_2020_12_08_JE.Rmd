@@ -1,0 +1,373 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Learning Outcomes
+
+- Determine code speed, assess inefficencies
+- Optimize code; write to maximize speed and clarity
+
+In programming, a distinction is made between interpreted and compiled languages. Compiled languages transform (i.e. "compile", "rebuild") code into machine readable code prior to execution, whereas interpreted languages do not. Rather, interpreted languages execute and interpret each command or line at a time. Compiled languages run faster and typically exhibit better performance, and are better in terms of memory allocation.
+
+Analogy
+Compiled: Reading a book that was in another language (e.g. Don Quixote) but has been translated to English
+Interpreted: A Spanish speaker reads the book and translates it to you while reading
+
+Compiled languages: C, C++, Fortran
+Interpreted languages: Java, MATLAB, Python, R
+
+R is known to sacrifice speed for expressivity and high-level syntax (a.k.a. syntactic sugar). C and C++ require more code but operate faster than R.
+
+# Learning Outcome 1: Assess Speed and Inefficencies
+
+## Check How Fast Your Code Is
+
+Sometimes it may be useful to see if you're making your code slower than it needs to be, or if an alternative way of writing code is much faster.
+
+First, can you show me how to calculate a mean on x?
+```{r}
+x <- rnorm(500)
+```
+
+Let's pretend you didn't know the mean function, so you decided to make your own. You can note this is a bad function and was written poorly, and that it includes functions we haven't covered (seq_length).
+
+```{r}
+# Writing a terrible function to compute mean
+badMean = function(x) {
+  m = 0
+  n = length(x) # get length of the array that a mean will be calculated for
+  for(i in seq_len(n)) # seq_len is slower than just saying 1:n
+    m = m + x[i] / n # computing an average at each instance-- so ugly
+  m
+}
+```
+
+Let's time how fast (or slow) the bad mean function is after doing it 1000 times.
+Note: I set.seed within each chunk as it is reset after each chunk.
+```{r}
+badSpeed <- system.time( { # acquire time
+  set.seed(4) # set seed for reproducibiluty when generatig number
+  for(i in 1:1000){ # iterate 1000 times
+    stuff<-runif(1000,min=0,max=100) # produce 1000 numbers from uniform distribution
+    badMean(stuff) # use bad mean function that we created
+  }
+} )
+```
+
+Okay, let's how time how fast the base mean function is after doing it 1000 times.
+
+```{r}
+goodSpeed <- system.time( {
+  set.seed(4) # set seed for reproducibiluty when generatig number
+  for(i in 1:1000){ # iterate 1000 times
+    stuff<-runif(1000,min=0,max=100) # produce 1000 numbers from uniform distribution
+    mean(stuff) # use base mean function
+  }
+} )
+
+badSpeed # print badMean speed
+goodSpeed # print goodMean speed
+faster <- badSpeed[3]/goodSpeed[3] # how much faster is base mean than bad mean?
+paste0("Base R is ",round(faster,3),"x faster than my awful mean function!")
+```
+
+An easier way to do this is using the benchmark package:
+
+## Use Benchmark to Time Your Code
+
+Let's compare bad mean, compiled bad mean, base mean, and compiled base mean, using microbenchmark
+Note: Bad mean is function we created
+```{r}
+library(microbenchmark)
+microbenchmark(mean(stuff), badMean(stuff),  times = 20, unit = "ms")
+```
+
+Microbenchmark reveals base mean is definitely faster than both compiled and interpreted mean.
+
+# Learning Outcome 2: Optimize Code
+
+NOTE: A decent amount of the below code may be new, unfamiliar, or feel advanced. That's okay. Don't feel like you need to understand everything now. I am just providing some introduction to these concepts for the future.
+
+## Compile Your Code
+
+You can enhance the speed of your R code a bit by compiling in advance, to reduce the steps in the process and the time required to run code.
+
+Let's try a practical example, with a compiled linear regression model vs. a standard interpreted linear regression model
+```{r}
+library(compiler) # load compiler function
+df<-data.frame(X = rnorm(200, mean = 5, sd = 1.5), Y = rnorm(200, mean = 15, sd = .5))
+clm <- cmpfun(lm)
+microbenchmark(lm(Y ~ X, data=df), clm(Y ~ X, data=df), times = 20, unit = "ms")
+```
+Microbenchmark reveals that the compiled linear model is faster in terms of its mean and median.
+
+## Saved Variables Are Faster Than Recomputing Each Time
+
+We've discussed hard coding and issues with it prior. Relatedly, you may have the option of inserting a function into a loop/iterator or alternatively, calling the function once and saving it to a variable once and reusing that variable in the loop. You should generally opt for the latter approach as it saves computation time when you only have to solve the function/argument once and not each time.
+
+Below we take the mean of an entire column and compute the difference of the number in each row from the mean of the variable. In the first example, we compute the difference against the saved mean variable. In the second example, we re-compute the mean at each iteration. Let's check it out and compare their times.
+
+```{r}
+meanX <- mean(df$X)
+microbenchmark(
+for(i in 1:length(df$X)){
+  df$X[i] - meanX
+},
+for(i in 1:length(df$X)){
+  df$X[i] - mean(df$X)
+},
+times = 20,
+unit = "ms"
+)
+```
+
+## Apply Functions Are a Vectorized Version of a For Loop
+
+So for loops can be inefficient. Is there a more efficient and faster way to run a for loop-- Specifically, a "vectorized" version (operate on all elements at once rather than having to iterate through each element at a time) of a for loop? Yes, there is. There's a family of functions actually called the apply family. They apply a function across different types of elements or data structures but they do a similar thing as a for loop but do it "all-at-once" in a vectorized fashion rather than a sequential fashion.
+
+Below are all of the version of apply:
+
+apply	Apply functions over array margins
+by	Apply a function to a data frame split by factors
+eapply	Apply a function over values in an environment
+lapply	Apply a function over a list or vector
+mapply	Apply a function to multiple list or vector arguments
+rapply	Recursively apply a function to a list
+tapply	Apply a function over a ragged array
+
+The base apply function has the following logic:
+apply(matrix, row(1)/column(2), function)
+
+How would you apply mean to each row of the dataframe "df"?
+
+```{r}
+
+```
+
+Now, let's compare a mean computed for each row in a for loop versus via apply.
+
+```{r}
+microbenchmark(
+  apply(df, 1, mean),
+  for(i in 1:nrow(df)){
+    mean(as.numeric(df[i,]))
+    }, 
+  times = 20,
+  unit = "ms")
+```
+
+Yup, apply is much faster, about 7x faster. That's because it's vectorized.
+
+## Don't Grow Your Vectors; Predefine Your Matrix Size
+
+Whenever you create a variable, you're allocating memory in RAM (random access memory; allows memory to be stored and retrieved) in order to store it. An analogy here would be if you have to pick up milk from the market for a week, do you want to go once and buy a single one gallon jug, or do you want to drive to the market multiple days for a 16 ounce carton of milk? The latter is inefficient and will hinder your productivity for other things you have to work on. Same thing with memory allocation! You want to allocate memory at the beginning and not to have to keep requesting for more for each iteration.
+
+With this in mind, you should have a goal of minimizing your variable assignments whenever possible in order to maximize speed. This is because every time you create a variable, you have to reallocate memory.
+
+Let's create a vector of number from 1 to 10000.
+
+A sensible way to create this vector:
+
+```{r}
+n <- 10000
+x <- vector("numeric", n)
+for(i in 1:n){
+  x[i] <- i
+}
+```
+
+This is predefining a vector by size n, and then populating each row with the given number.
+
+The suboptimal way to create this vector:
+
+```{r}
+x <- NULL
+for(i in 1:n){
+  x <- c(x, i)
+}
+```
+
+This is starting with an empty variable and appending a row for each iteration. In other words, you're GROWING the vector. And this is bad and slow.
+
+Let's do a more practical example. Let's say we are trying to sum all of the elements from the beginning to the prior instance, and divide it by the number on the current iteration.
+
+Here is a growing vector (bad!):
+
+```{r}
+growDf <- function(input){
+  x <- data.frame()
+  for(i in 1:length(input)){
+  output <- sum(input[1:(i-1)]) / input[i] # sum is a new function that we have not used prior in class
+  x <- rbind(x, data.frame(output))
+}
+}
+```
+
+Here is a predefined vector (good!):
+
+```{r}
+predefineDf <- function(input){
+  y <- matrix(ncol = 1, nrow = length(stuff))
+  for(i in 1:length(input)){
+  output <- sum(input[1:(i-1)]) / input[i]
+  y[i,] <- output
+} 
+}
+```
+
+Let's compare the speeds:
+
+```{r}
+microbenchmark(growDf(stuff), predefineDf(stuff), times = 5, unit = "ms")
+```
+
+As you can see, it's a whole lot faster when your predefine your vectors, matrices, or dataframes than if you grow it. It may take a little more forethought to predefine vectors but as you dive into more complex and computationally demanding problems, you'll be glad you predefined your sizes.
+
+## Operate on Vectors Whenever Possible
+
+Many functions can operate on entire vectors, and do not need to be applied to each row/cell/element of a dataframe/vector. Your code will run much faster if you operate on the vector rather than calling the function over and over. It also tends to look cleaner to have less code.
+
+Here's a simple example. Let's take multiplication of vector 1 and vector 2.
+
+Bad Way: Operate on each row and apply function each time through a for loop
+
+```{r}
+x1 <- rnorm(2000000)
+x2 <- rnorm(2000000)
+yBad <- numeric(length(x1))
+for(i in 1:length(x1)){
+  yBad[i] <- x1[i] * x2[i]
+}
+```
+
+Good Way: Operate on the entire vector at a time
+
+```{r}
+yGood <- x1 * x2
+```
+
+Let's do another, more extended example that's similar to a previous class assignment we had. We want to assign variable names to each row depending on the value of another column. If it's below 33 it's small, if it's above 66 it's large, and if it's between it's medium.
+
+I have to create a dataset first.
+
+```{r}
+set.seed(4)
+a <- runif(25000, min = 0, max = 100)
+```
+
+Bad Way: 
+
+```{r}
+slowMat <- data.frame(matrix(nrow = length(a), ncol = 1))
+slowMat <- cbind(slowMat, a)
+n <- c("cat","num")
+names(slowMat) <- n
+  
+for(i in 1:length(a)){
+if(slowMat$num[i] < 33.33333){
+  slowMat$cat[i] <- "small"
+} else if(slowMat$num[i] > 66.66666){
+  slowMat$cat[i] <- "large"
+} else {
+  slowMat$cat[i] <- "medium"
+}
+}
+```
+
+Fast Way: 
+
+```{r}
+fastMat <- data.frame(matrix(nrow = length(a), ncol = 1))
+fastMat <- cbind(fastMat, a)
+n <- c("cat","num")
+names(fastMat) <- n
+
+fastMat$cat[fastMat$num < 33.33333] <- "small"
+fastMat$cat[fastMat$num > 66.66666] <- "large"
+fastMat$cat[fastMat$num <= 66.66666 & fastMat$num >= 33.33333] <- "medium"
+```
+
+## Matrices Are Faster to Operate On Than Dataframes
+
+Matrices have to be entirely of the same data type. Becaue of this, there are some efficiency advantages to operating on matrices instead of dataframes. See below example:
+
+```{r}
+m<-matrix(stuff)
+d<-data.frame(stuff)
+
+microbenchmark(rowMeans(m), rowMeans(d), times = 50, unit = "ms")
+```
+
+
+## Parallelize Your Code for Large Problems
+
+Your computer's Central Processing Unit (CPU) has multiple cores. Once upon a time, computers only had a single core, but now most laptops you'll get will probably have four cores (I think). Let's check how many cores your computer has:
+
+```{r}
+library(doParallel)
+detectCores()
+```
+
+So why are we checking this? Well, if we're using R as it was originally designed, there's no point. R only uses one core at a time (single-threaded) and executes code sequentially on this single core. However, if you begin to "parallelize" your code, you can use all cores simultaneously. The idea here is that rather than executing each part of your code or for loop sequentially-- 1 then 2 then 3 then 4-- parallel code may split 1 onto core 1, 2 onto core 2, 3 onto core 3, and 4 onto core 4. The usefulness of this is apparent. For example, rather than person (i.e. core) having to complete one task, dividing up the task among four people will greatly speed up when the task is completed.
+
+Let's do an example to compare. In the class on simulations, I demonstrated how you bootstrap an indirect effect. Well, let's revisit that. Let's generate some data first.
+
+```{r}
+a <- rnorm(400, 18, 3)
+b <- rnorm(400, 22.5, 4)
+c <- rnorm(400, 20, 2)
+medDf <- data.frame(x = a, m = b, y = c)
+```
+
+Below is the function for bootstrapping an indirect effect:
+
+```{r}
+bootstrap <- function(data){
+  samp <- sample(1:length(x), replace = TRUE) # sampling WITH REPLACEMENT is integral to bootstrapping
+  new_data <- data[samp, ] # let's take those samples from the old data and make them a new dataframe
+  a <- lm(new_data$m ~ new_data$x) # run a path
+  b <- lm(new_data$y ~ new_data$m + new_data$x) # run b path
+  indirect <- as.numeric(a$coefficients[2]) * as.numeric(b$coefficients[2]) # multiply coefficients of two paths
+  return(indirect)
+}
+```
+
+Okay, now let's do 500 iterations of the bootstrapping an indirect effect, but do it in base R, sequentially (i.e. on a single core).
+
+```{r}
+niter <- 500 # number of iterations
+mat <- matrix(nrow=niter) # create an empty matrix
+
+seqTime <- system.time( # acquire time
+  for(i in 1:niter){
+  mat[i] <- bootstrap(medDf)
+  }
+)
+```
+
+Okay, now let's do it parallelized:
+
+```{r}
+library(parallel)
+library(foreach) # for each needed for doparallel for loop
+core <- detectCores() # how many cores do we have?
+cl<-parallel::makeCluster(core-1,setup_strategy = "sequential") # use one less core than we have so we're not using every core. the setup strategy = "sequential" is some weird thing I had to enter for the updated version of R that had issues with the new version.
+setDefaultCluster(cl) # reguster the number of clusters as default for the current session
+registerDoParallel(cl) # register the number of clusters for the foreach package
+
+parTime <- system.time( # acquire time
+  mat2 <- foreach(i=1:niter, .combine = 'c') %dopar% # for the number of iterations, combine each iteration to list
+  {
+    out <- bootstrap(medDf) # apply bootstrap function, assign to out
+    out # return out
+    # out binded to list and iteration continues
+  }
+)
+stopCluster(cl) # stop using multiple cores
+
+fasterP <- seqTime[3]/parTime[3] # how much faster is parallized bootstrapping?
+paste0("Parallelized bootstrapping is ",round(fasterP,3),"x faster than my sequential bootstrapping")
+```
