@@ -30,6 +30,7 @@ Sometimes it may be useful to see if you're making your code slower than it need
 First, can you show me how to calculate a mean on x?
 ```{r}
 x <- rnorm(500)
+mean(x)
 ```
 
 Let's pretend you didn't know the mean function, so you decided to make your own. You can note this is a bad function and was written poorly, and that it includes functions we haven't covered (seq_length).
@@ -110,12 +111,15 @@ We've discussed hard coding and issues with it prior. Relatedly, you may have th
 
 Below we take the mean of an entire column and compute the difference of the number in each row from the mean of the variable. In the first example, we compute the difference against the saved mean variable. In the second example, we re-compute the mean at each iteration. Let's check it out and compare their times.
 
+
 ```{r}
 meanX <- mean(df$X)
 microbenchmark(
+  # efficient
 for(i in 1:length(df$X)){
   df$X[i] - meanX
 },
+  # slower
 for(i in 1:length(df$X)){
   df$X[i] - mean(df$X)
 },
@@ -144,7 +148,7 @@ apply(matrix, row(1)/column(2), function)
 How would you apply mean to each row of the dataframe "df"?
 
 ```{r}
-
+apply(df, c(1,2), mean)
 ```
 
 Now, let's compare a mean computed for each row in a for loop versus via apply.
@@ -210,7 +214,7 @@ Here is a predefined vector (good!):
 
 ```{r}
 predefineDf <- function(input){
-  y <- matrix(ncol = 1, nrow = length(stuff))
+  y <- as.data.frame(matrix(ncol = 1, nrow = length(input)))
   for(i in 1:length(input)){
   output <- sum(input[1:(i-1)]) / input[i]
   y[i,] <- output
@@ -221,7 +225,7 @@ predefineDf <- function(input){
 Let's compare the speeds:
 
 ```{r}
-microbenchmark(growDf(stuff), predefineDf(stuff), times = 5, unit = "ms")
+microbenchmark(growDf(stuff), predefineDf(stuff), times = 10, unit = "ms")
 ```
 
 As you can see, it's a whole lot faster when your predefine your vectors, matrices, or dataframes than if you grow it. It may take a little more forethought to predefine vectors but as you dive into more complex and computationally demanding problems, you'll be glad you predefined your sizes.
@@ -295,8 +299,8 @@ fastMat$cat[fastMat$num <= 66.66666 & fastMat$num >= 33.33333] <- "medium"
 Matrices have to be entirely of the same data type. Becaue of this, there are some efficiency advantages to operating on matrices instead of dataframes. See below example:
 
 ```{r}
-m<-matrix(stuff)
-d<-data.frame(stuff)
+m<-as.matrix(df)
+d<-as.data.frame(df)
 
 microbenchmark(rowMeans(m), rowMeans(d), times = 50, unit = "ms")
 ```
@@ -326,7 +330,7 @@ Below is the function for bootstrapping an indirect effect:
 
 ```{r}
 bootstrap <- function(data){
-  samp <- sample(1:length(x), replace = TRUE) # sampling WITH REPLACEMENT is integral to bootstrapping
+  samp <- sample(1:nrow(data), replace = TRUE) # sampling WITH REPLACEMENT is integral to bootstrapping
   new_data <- data[samp, ] # let's take those samples from the old data and make them a new dataframe
   a <- lm(new_data$m ~ new_data$x) # run a path
   b <- lm(new_data$y ~ new_data$m + new_data$x) # run b path
